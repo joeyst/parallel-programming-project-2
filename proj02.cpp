@@ -12,8 +12,8 @@ float Ranf( unsigned int *seed, float low, float high )
         return(   low  +  r * ( high - low ) / (float)RAND_MAX   );
 }
 
-int	NowYear = 0;		// 2023 - 2028
-int	NowMonth = 2023;		// 0 - 11
+int	NowYear = 2023;		// 2023 - 2028
+int	NowMonth = 0;		// 0 - 11
 
 float	NowPrecip;		// inches of rain per month
 float	NowTemp;		// temperature this month
@@ -82,7 +82,7 @@ WaitBarrier( )
 }
 
 
-void update_temp_and_precip() {
+void UpdateTemperatureAndPrecipitation() {
 	float ang = (  30.*(float)NowMonth + 15.  ) * ( M_PI / 180. );
 
 	float temp = AVG_TEMP - AMP_TEMP * cos( ang );
@@ -111,6 +111,14 @@ int GetRabbitQuantity() {
 	return nextNumRabbits;
 }
 
+void SetRabbitQuantity(int NewRabbitQuantity) {
+	NowNumRabbits = NewRabbitQuantity;
+}
+
+void SetRyeGrassQuantity(float NewRyeGrassQuantity) {
+	NowHeight = NewRyeGrassQuantity;
+}
+
 float
 Sqr( float x )
 {
@@ -128,36 +136,38 @@ float GetRyeGrassQuantity() {
 	return nextHeight;
 }
 
+int PlaceholderReturn(void) {
+	return 0;
+}
+
+void PlaceholderAssign(int) {
+
+}
+
 /*
 SIMULATION FUNCTIONS 
 */
 
 void RepeatSimulation(void (*SimFn) (void)) {
-	while (NowYear < 2019) {
-		while (NowMonth < 12) {
-			NowMonth++;
-			SimFn();
-		}
-		NowMonth = 0;
-	}
+	while (NowYear < 2029) SimFn();
 }
 
 void FixMe() {
 	throw "FixMe.";
 }
 
-void DoNothing() {
+void DoNothing(void) {
 	
 }
 
-template <class ReturnType>
-void Simulate(ReturnType (*Compute) (void), void (*Assign) (void), void (*Print) (void)) {
+template <class VariableType>
+void Simulate(VariableType (*Compute) (void), void (*Assign) (VariableType), void (*Print) (void)) {
 	// Compute 
-	Compute();
+	VariableType Value = Compute();
 	WaitBarrier();
 
 	// Assign 
-	Assign();
+	Assign(Value);
 	WaitBarrier();
 
 	// Print
@@ -165,44 +175,56 @@ void Simulate(ReturnType (*Compute) (void), void (*Assign) (void), void (*Print)
 	WaitBarrier();
 }
 
+void Print() {
+	UpdateTemperatureAndPrecipitation();	
+	printf("%i, %i, %f, %f, %f, %i\n", NowYear, NowMonth, NowPrecip, NowTemp, NowHeight, NowNumRabbits);
+	NowMonth++;
+	if (NowMonth % 12 == 0) {
+		NowYear++;
+	}
+}
+
 void Rabbits() {
-	Simulate(GetRabbitQuantity, FixMe, DoNothing);
+	Simulate(GetRabbitQuantity, SetRabbitQuantity, DoNothing);
 }
 
 void RyeGrass() {
-	Simulate(GetRyeGrassQuantity, FixMe, DoNothing);
+	Simulate(GetRyeGrassQuantity, SetRyeGrassQuantity, DoNothing);
 }
 
 void Watcher() {
-	Simulate(DoNothing, DoNothing, FixMe);
+	Simulate(PlaceholderReturn, PlaceholderAssign, Print);
 }
 
-void Mutation() {
-	Simulate(FixMe, FixMe, DoNothing);
-}
+// void Mutation() {
+// 	Simulate(FixMe, FixMe, DoNothing);
+// }
 
 int main() {
-	omp_set_num_threads( 4 );	// same as # of sections
+	UpdateTemperatureAndPrecipitation();
+
+	omp_set_num_threads( 3 );	// same as # of sections
+	InitBarrier( 3 );
 	#pragma omp parallel sections
 	{
 		#pragma omp section
 		{
-			Rabbits( );
+			RepeatSimulation(Rabbits);
 		}
 
 		#pragma omp section
 		{
-			RyeGrass( );
+			RepeatSimulation(RyeGrass);
 		}
 
 		#pragma omp section
 		{
-			Watcher( );
+			RepeatSimulation(Watcher);
 		}
 
-		#pragma omp section
-		{
-			Mutation( );
-		}
+		// #pragma omp section
+		// {
+		// 	Mutation( );
+		// }
 	}
 }
