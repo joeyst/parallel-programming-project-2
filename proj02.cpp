@@ -5,8 +5,6 @@
 #include <time.h>
 #include <omp.h>
 
-float x = Ranf( -1.f, 1.f );
-
 float Ranf( unsigned int *seed, float low, float high )
 {
         float r = (float) rand( );              // 0 - RAND_MAX
@@ -148,6 +146,10 @@ void FixMe() {
 	throw "FixMe.";
 }
 
+void DoNothing() {
+	
+}
+
 template <class ReturnType>
 void Simulate(ReturnType (*Compute) (void), void (*Assign) (void), void (*Print) (void)) {
 	// Compute 
@@ -164,68 +166,43 @@ void Simulate(ReturnType (*Compute) (void), void (*Assign) (void), void (*Print)
 }
 
 void Rabbits() {
-	Simulate(GetRabbitQuantity, FixMe, NULL);
+	Simulate(GetRabbitQuantity, FixMe, DoNothing);
 }
 
 void RyeGrass() {
-	Simulate(GetRyeGrassQuantity, FixMe, NULL);
+	Simulate(GetRyeGrassQuantity, FixMe, DoNothing);
 }
 
 void Watcher() {
-	Simulate<void>(NULL, NULL, FixMe);
+	Simulate(DoNothing, DoNothing, FixMe);
 }
 
 void Mutation() {
-
-	WaitBarrier();
-
-	WaitBarrier();
-
-	WaitBarrier();
+	Simulate(FixMe, FixMe, DoNothing);
 }
 
-void A() {
-	while( NowYear < 2029 )
+int main() {
+	omp_set_num_threads( 4 );	// same as # of sections
+	#pragma omp parallel sections
+	{
+		#pragma omp section
 		{
-			// compute a temporary next-value for this quantity
-			// based on the current state of the simulation:
-			. . .
-
-			// DoneComputing barrier:
-			WaitBarrier( );	-- or --   #pragma omp barrier;
-			. . .
-
-			// DoneAssigning barrier:
-			WaitBarrier( );	-- or --   #pragma omp barrier;
-			. . .
-
-			// DonePrinting barrier:
-			WaitBarrier( );	-- or --   #pragma omp barrier;
-			. . .
+			Rabbits( );
 		}
+
+		#pragma omp section
+		{
+			RyeGrass( );
+		}
+
+		#pragma omp section
+		{
+			Watcher( );
+		}
+
+		#pragma omp section
+		{
+			Mutation( );
+		}
+	}
 }
-
-omp_set_num_threads( 4 );	// same as # of sections
-#pragma omp parallel sections
-{
-	#pragma omp section
-	{
-		Rabbits( );
-	}
-
-	#pragma omp section
-	{
-		RyeGrass( );
-	}
-
-	#pragma omp section
-	{
-		Watcher( );
-	}
-
-	#pragma omp section
-	{
-		MyAgent( );	// your own
-	}
-}       // implied barrier -- all functions must return in order
-	// to allow any of them to get past here
