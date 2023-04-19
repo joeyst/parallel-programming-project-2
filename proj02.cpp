@@ -17,8 +17,9 @@ int	NowMonth = 0;		// 0 - 11
 
 float	NowPrecip;		// inches of rain per month
 float	NowTemp;		// temperature this month
-float	NowHeight = 5.;		// rye grass height in inches
-int	NowNumRabbits = 1;		// number of rabbits in the current population
+float	NowHeight = 500.;		// rye grass height in inches
+int	NowNumRabbits = 100;		// number of rabbits in the current population
+int NowNumMutants = 0;
 
 unsigned int seed = 0;
 
@@ -136,6 +137,40 @@ float GetRyeGrassQuantity() {
 	return nextHeight;
 }
 
+int GetMutationQuantity() {
+	/*
+	Mutants have a 25% chance of breeding from mutants and regular 
+	rabbits. 
+
+	They have a 10% chance of breeding from regular rabbits and regular rabbits.
+
+	Mutant rabbits always breed with regular rabbits. 
+
+	Unfortunately, mutant rabbits die after a month, guaranteed.  
+	*/
+
+	/*
+	If the number of mutants is less than the number of rabbits, then subtract 
+	the number of mutants from the number of rabbits and calculate the new number of 
+	rabbits and regular rabbits. 
+	*/
+
+	if (NowNumMutants < NowNumRabbits) {
+		int LeftoverNumRabbits = NowNumRabbits - NowNumMutants;
+		int NewNumMutants = floor((float)NowNumMutants * 0.25);
+		NewNumMutants = NewNumMutants + floor((float)LeftoverNumRabbits * 0.10);
+		return NewNumMutants;
+	}
+
+	else {
+		return NowNumRabbits * 0.25;
+	}
+}
+
+void SetMutationQuantity(int Quantity) {
+	NowNumMutants = Quantity;
+}
+
 int PlaceholderReturn(void) {
 	return 0;
 }
@@ -177,7 +212,7 @@ void Simulate(VariableType (*Compute) (void), void (*Assign) (VariableType), voi
 
 void Print() {
 	UpdateTemperatureAndPrecipitation();	
-	printf("%i, %i, %f, %f, %f, %i\n", NowYear, NowMonth, NowPrecip, NowTemp, NowHeight, NowNumRabbits);
+	printf("%i, %i, %f, %f, %f, %i, %i\n", NowYear, NowMonth, NowPrecip, NowTemp, NowHeight, NowNumRabbits, NowNumMutants);
 	NowMonth++;
 	if (NowMonth % 12 == 0) {
 		NowYear++;
@@ -196,15 +231,15 @@ void Watcher() {
 	Simulate(PlaceholderReturn, PlaceholderAssign, Print);
 }
 
-// void Mutation() {
-// 	Simulate(FixMe, FixMe, DoNothing);
-// }
+void Mutation() {
+	Simulate(GetMutationQuantity, SetMutationQuantity, DoNothing);
+}
 
 int main() {
 	UpdateTemperatureAndPrecipitation();
 
-	omp_set_num_threads( 3 );	// same as # of sections
-	InitBarrier( 3 );
+	omp_set_num_threads( 4 );	// same as # of sections
+	InitBarrier( 4 );
 	#pragma omp parallel sections
 	{
 		#pragma omp section
@@ -222,9 +257,9 @@ int main() {
 			RepeatSimulation(Watcher);
 		}
 
-		// #pragma omp section
-		// {
-		// 	Mutation( );
-		// }
+		#pragma omp section
+		{
+			RepeatSimulation(Mutation);
+		}
 	}
 }
