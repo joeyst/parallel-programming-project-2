@@ -17,14 +17,31 @@ int	NowMonth = 0;		// 0 - 11
 
 float	NowPrecip;		// inches of rain per month
 float	NowTemp;		// temperature this month
-float	NowHeight = 500.;		// rye grass height in inches
-int	NowNumRabbits = 100;		// number of rabbits in the current population
+
+#ifndef INITIALHEIGHT
+#define INITIALHEIGHT 5.
+#endif
+
+#ifndef NOWNUMRABBITS 
+#define NOWNUMRABBITS 5
+#endif
+
+#ifndef RYEGRASSGROWSPERMONTH 
+#define RYEGRASSGROWSPERMONTH 20.0 
+#endif 
+
+#ifndef ONERABBITSEATSPERMONTH 
+#define ONERABBITSEATSPERMONTH 1.0
+#endif
+
+float	NowHeight = INITIALHEIGHT;		// rye grass height in inches
+int	NowNumRabbits = NOWNUMRABBITS;		// number of rabbits in the current population
 int NowNumMutants = 0;
 
 unsigned int seed = 0;
 
-const float RYEGRASS_GROWS_PER_MONTH =		20.0;
-const float ONE_RABBITS_EATS_PER_MONTH =	 1.0;
+const float RYEGRASS_GROWS_PER_MONTH =		RYEGRASSGROWSPERMONTH;
+const float ONE_RABBITS_EATS_PER_MONTH =	 ONERABBITSEATSPERMONTH;
 
 const float AVG_PRECIP_PER_MONTH =	       12.0;	// average
 const float AMP_PRECIP_PER_MONTH =		4.0;	// plus or minus
@@ -134,6 +151,8 @@ float GetRyeGrassQuantity() {
 	nextHeight += tempFactor * precipFactor * RYEGRASS_GROWS_PER_MONTH;
 	nextHeight -= (float)NowNumRabbits * ONE_RABBITS_EATS_PER_MONTH;
 
+	if (nextHeight < 0.) nextHeight = 0.;
+
 	return nextHeight;
 }
 
@@ -155,15 +174,39 @@ int GetMutationQuantity() {
 	rabbits and regular rabbits. 
 	*/
 
+	/*
+	If there are fewer mutants than non-mutants, 25% chance for a mutant 
+	for each (mutant, non-mutant) pair there is. 10% chance for (non-mutant, 
+	non-mutant) pairs. 
+	*/
 	if (NowNumMutants < NowNumRabbits) {
 		int LeftoverNumRabbits = NowNumRabbits - NowNumMutants;
-		int NewNumMutants = floor((float)NowNumMutants * 0.25);
-		NewNumMutants = NewNumMutants + floor((float)LeftoverNumRabbits * 0.10);
+		int NewNumMutants = 0;
+		float AttemptValue;
+		for (int i = 0; i < NowNumMutants; i++) {
+			AttemptValue = Ranf( &seed, 0., 1. );
+			if (AttemptValue < 0.25) NewNumMutants++;
+		}
+
+		for (int i = 0; i < LeftoverNumRabbits; i++) {
+			AttemptValue = Ranf( &seed, 0., 1. );
+			if (AttemptValue < 0.10) NewNumMutants++;
+		}
 		return NewNumMutants;
 	}
 
+	/*
+	If the number of mutants is greater than or equal to the number of rabbits, 
+	we'll have a (mutant, non-mutant) pair for every single non-mutant. 
+	*/
 	else {
-		return NowNumRabbits * 0.25;
+		int NewNumMutants = 0;
+		float AttemptValue;
+		for (int i = 0; i < NowNumMutants; i++) {
+			AttemptValue = Ranf( &seed, 0., 1. );
+			if (AttemptValue < 0.25) NewNumMutants++;
+		}
+		return NewNumMutants;
 	}
 }
 
@@ -212,7 +255,7 @@ void Simulate(VariableType (*Compute) (void), void (*Assign) (VariableType), voi
 
 void Print() {
 	UpdateTemperatureAndPrecipitation();	
-	printf("%i, %i, %f, %f, %f, %i, %i\n", NowYear, NowMonth, NowPrecip, NowTemp, NowHeight, NowNumRabbits, NowNumMutants);
+	printf("%-8i, %-8i, %-10.4f, %-10.4f, %-10.4f, %-8i, %-8i\n", NowYear, NowMonth, NowPrecip, NowTemp, NowHeight, NowNumRabbits, NowNumMutants);
 	NowMonth++;
 	if (NowMonth % 12 == 0) {
 		NowYear++;
@@ -238,6 +281,7 @@ void Mutation() {
 int main() {
 	UpdateTemperatureAndPrecipitation();
 
+	printf("NowYear, NowMonth, NowPrecip, NowTemp, NowHeight, NowNumRabbits, NowNumMutants\n");
 	omp_set_num_threads( 4 );	// same as # of sections
 	InitBarrier( 4 );
 	#pragma omp parallel sections
