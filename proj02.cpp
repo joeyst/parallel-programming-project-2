@@ -5,6 +5,18 @@
 #include <time.h>
 #include <omp.h>
 
+/*
+Compiled to `proj02` executable with: 
+`g++ proj02.cpp -o proj02 -lm -fopenmp` 
+with variables: 
+`DINITIALHEIGHT`
+`DNOWNUMRABBITS`
+`DRYEGRASSGROWSPERMONTH`
+`DONERABBITSEATSPERMONTH`
+`DONEMUTANTSEATSPERMONTH`
+E.g.: `g++ proj02.cpp -o proj02 -lm -fopenmp -DINITIALHEIGHT=420`
+*/
+
 float Ranf( unsigned int *seed, float low, float high )
 {
         float r = (float) rand( );              // 0 - RAND_MAX
