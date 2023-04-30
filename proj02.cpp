@@ -18,6 +18,9 @@ int	NowMonth = 0;		// 0 - 11
 float	NowPrecip;		// inches of rain per month
 float	NowTemp;		// temperature this month
 
+/*
+Defines here so that can run `script.bash` with custom "arguments". 
+*/
 #ifndef INITIALHEIGHT
 #define INITIALHEIGHT 5.
 #endif
@@ -34,6 +37,10 @@ float	NowTemp;		// temperature this month
 #define ONERABBITSEATSPERMONTH 1.0
 #endif
 
+#ifndef ONEMUTANTSEATSPERMONTH
+#define ONEMUTANTSEATSPERMONTH 2.0
+#endif
+
 float	NowHeight = INITIALHEIGHT;		// rye grass height in inches
 int	NowNumRabbits = NOWNUMRABBITS;		// number of rabbits in the current population
 int NowNumMutants = 0;
@@ -42,6 +49,7 @@ unsigned int seed = 0;
 
 const float RYEGRASS_GROWS_PER_MONTH =		RYEGRASSGROWSPERMONTH;
 const float ONE_RABBITS_EATS_PER_MONTH =	 ONERABBITSEATSPERMONTH;
+const float ONE_MUTANTS_EATS_PER_MONTH = ONEMUTANTSEATSPERMONTH;
 
 const float AVG_PRECIP_PER_MONTH =	       12.0;	// average
 const float AMP_PRECIP_PER_MONTH =		4.0;	// plus or minus
@@ -150,6 +158,7 @@ float GetRyeGrassQuantity() {
 	float nextHeight = NowHeight;
 	nextHeight += tempFactor * precipFactor * RYEGRASS_GROWS_PER_MONTH;
 	nextHeight -= (float)NowNumRabbits * ONE_RABBITS_EATS_PER_MONTH;
+	nextHeight -= (float)NowNumMutants * ONE_MUTANTS_EATS_PER_MONTH;
 
 	if (nextHeight < 0.) nextHeight = 0.;
 
